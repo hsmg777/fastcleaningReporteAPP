@@ -31,7 +31,7 @@ class OrdenList(MethodView):
                 numeroOrden=data['numeroOrden'],
                 valor=data['valor'],
                 fecha=data.get('fecha') ,
-                id_reporteMensual= ['id_reporteMensual']
+                id_reporteMensual= data['id_reporteMensual']
             )
             db.session.add(nueva_orden)
             db.session.commit()
