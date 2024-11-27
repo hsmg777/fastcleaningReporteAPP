@@ -3,7 +3,7 @@ from flask.views import MethodView
 from db import db
 from models.Gastos import Gastos
 from schemas.GastosSchema import GastosSchema
-from marshmallow import ValidationError
+from sqlalchemy.sql import text  # Importar text para llamadas SQL textuales
 
 # Crear el Blueprint
 blp = Blueprint("Gastos", __name__, url_prefix="/tasks/gastos", description="Operaciones CRUD para Gastos")
@@ -27,14 +27,21 @@ class GastosList(MethodView):
     def post(self, data):
         """Crear un nuevo gasto"""
         try:
+            # Crear el nuevo gasto
             nuevo_gasto = Gastos(
                 nombreGasto=data['nombreGasto'],
                 valor=data['valor'],
                 fecha=data.get('fecha'),  # Aceptar fecha si viene en el JSON
-                id_reporteMensual = data['id_reporteMensual']
+                id_reporteMensual=data['id_reporteMensual']
             )
             db.session.add(nuevo_gasto)
             db.session.commit()
+
+            # Llamar al Stored Procedure para actualizar el reporte mensual
+            stored_proc = text("EXEC sp_UpdateReporteMensual :id")
+            db.session.execute(stored_proc, {'id': data['id_reporteMensual']})
+            db.session.commit()
+
             return nuevo_gasto
         except Exception as e:
             abort(400, message=f"Error al crear el gasto: {str(e)}")
@@ -53,22 +60,42 @@ class GastosResource(MethodView):
     @blp.response(200, GastosSchema)  # Define el esquema para la respuesta
     def put(self, data, id_gastos):
         """Actualizar un gasto existente"""
-        gasto = Gastos.query.get_or_404(id_gastos)
-        if 'nombreGasto' in data:
-            gasto.nombreGasto = data['nombreGasto']
-        if 'valor' in data:
-            gasto.valor = data['valor']
-        if 'fecha' in data:
-            gasto.fecha = data['fecha']
-        if 'id_reporteMensual' in data:
-            gasto.id_reporteMensual = data['id_reporteMensual']
-        db.session.commit()
-        return gasto
+        try:
+            gasto = Gastos.query.get_or_404(id_gastos)
+            if 'nombreGasto' in data:
+                gasto.nombreGasto = data['nombreGasto']
+            if 'valor' in data:
+                gasto.valor = data['valor']
+            if 'fecha' in data:
+                gasto.fecha = data['fecha']
+            if 'id_reporteMensual' in data:
+                gasto.id_reporteMensual = data['id_reporteMensual']
+
+            db.session.commit()
+
+            # Llamar al Stored Procedure para actualizar el reporte mensual
+            stored_proc = text("EXEC sp_UpdateReporteMensual :id")
+            db.session.execute(stored_proc, {'id': gasto.id_reporteMensual})
+            db.session.commit()
+
+            return gasto
+        except Exception as e:
+            abort(400, message=f"Error al actualizar el gasto: {str(e)}")
 
     @blp.response(204)  # Sin contenido en la respuesta
     def delete(self, id_gastos):
         """Eliminar un gasto"""
-        gasto = Gastos.query.get_or_404(id_gastos)
-        db.session.delete(gasto)
-        db.session.commit()
-        return '', 204
+        try:
+            gasto = Gastos.query.get_or_404(id_gastos)
+            id_reporteMensual = gasto.id_reporteMensual  # Capturar el ID del reporte antes de eliminar
+            db.session.delete(gasto)
+            db.session.commit()
+
+            # Llamar al Stored Procedure para actualizar el reporte mensual
+            stored_proc = text("EXEC sp_UpdateReporteMensual :id")
+            db.session.execute(stored_proc, {'id': id_reporteMensual})
+            db.session.commit()
+
+            return '', 204
+        except Exception as e:
+            abort(400, message=f"Error al eliminar el gasto: {str(e)}")
