@@ -20,15 +20,18 @@ def create_app(testing=False):
     app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
 
     # Configuración de la conexión a la base de datos
-    server = '(localdb)\\MSSQLLocalDB'
+    server = 'ingwebserver.database.windows.net'
     database = 'FastCleaning'
     username = 'aurora'
-    password = 'mamifer1'
+    password = 'Mamifer_1'
     driver = 'ODBC Driver 17 for SQL Server'
-        
+
+    # Codificar los parámetros de conexión
     params = urllib.parse.quote_plus(
-        f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};UID={username};PWD={password}"
+        f"DRIVER={{{driver}}};SERVER={server},1433;DATABASE={database};UID={username};PWD={password};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;"
     )
+    
+    # Crear la cadena de conexión para SQLAlchemy
     connection_string = f"mssql+pyodbc:///?odbc_connect={params}"
     app.config['SQLALCHEMY_DATABASE_URI'] = connection_string
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
