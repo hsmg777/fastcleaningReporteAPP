@@ -47,6 +47,21 @@ class OrdenList(MethodView):
             abort(400, message=f"Error al crear la orden: {str(e)}")
 
 
+# Nuevo endpoint para obtener órdenes por id_reporteMensual
+@blp.route('/ordenes/reporte/<int:id_reporteMensual>')
+class OrdenByReporte(MethodView):
+    @blp.response(200, OrdenSchema(many=True))
+    def get(self, id_reporteMensual):
+        """Obtener órdenes por ID de reporte mensual"""
+        try:
+            # Consulta SQL para obtener las órdenes
+            query = text("SELECT * FROM Orden WHERE id_reporteMensual = :id_reporteMensual")
+            result = db.session.execute(query, {'id_reporteMensual': id_reporteMensual})
+            return result
+        except Exception as e:
+            abort(400, message=f"Error al obtener las órdenes: {str(e)}")
+
+
 # Rutas para /tasks/ordenes/<int:id_orden>
 @blp.route('/ordenes/<int:id_orden>')
 class OrdenResource(MethodView):
