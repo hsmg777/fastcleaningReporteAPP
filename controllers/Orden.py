@@ -55,7 +55,7 @@ class OrdenByReporte(MethodView):
         """Obtener órdenes por ID de reporte mensual"""
         try:
             # Consulta SQL para obtener las órdenes
-            query = text("SELECT * FROM Orden WHERE id_reporteMensual = :id_reporteMensual")
+            query = text("SELECT * FROM Orden WHERE id_reporteMensual = :id_reporteMensual ORDER BY numeroOrden ASC")
             result = db.session.execute(query, {'id_reporteMensual': id_reporteMensual})
             return result
         except Exception as e:

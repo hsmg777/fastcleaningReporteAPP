@@ -78,9 +78,9 @@ def exportar_reporte(id_reporteMensual):
         # Consultar el reporte
         reporte = ReporteMensual.query.get_or_404(id_reporteMensual)
 
-        # Consultar las órdenes asociadas al reporte
+        # Consultar las órdenes asociadas al reporte y ordenarlas por numeroOrden ascendente
         ordenes = db.session.execute(
-            text("SELECT numeroOrden AS orden, valor, fecha FROM Orden WHERE id_reporteMensual = :id_reporteMensual"),
+            text("SELECT numeroOrden AS orden, valor, fecha FROM Orden WHERE id_reporteMensual = :id_reporteMensual ORDER BY numeroOrden ASC"),
             {'id_reporteMensual': id_reporteMensual}
         ).fetchall()
 
