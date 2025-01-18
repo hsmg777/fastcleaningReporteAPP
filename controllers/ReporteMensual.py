@@ -5,6 +5,7 @@ from db import db
 from models.ReporteMensual import ReporteMensual
 from models.Orden import Orden
 from models.Gastos import Gastos
+from models.Factura import Factura
 from schemas.ReporteMensualSchema import ReporteMensualSchema
 from sqlalchemy.sql import text  # Asegúrate de importar esto
 import openpyxl
@@ -73,7 +74,7 @@ class ReporteMensualResource(MethodView):
 # Nuevo endpoint para exportar datos a Excel
 @blp.route('/exportar/<int:id_reporteMensual>', methods=['GET'])
 def exportar_reporte(id_reporteMensual):
-    """Exportar reporte mensual, órdenes y gastos a Excel"""
+    """Exportar reporte mensual, órdenes, gastos y facturas a Excel"""
     try:
         # Consultar el reporte
         reporte = ReporteMensual.query.get_or_404(id_reporteMensual)
@@ -81,6 +82,12 @@ def exportar_reporte(id_reporteMensual):
         # Consultar las órdenes asociadas al reporte y ordenarlas por numeroOrden ascendente
         ordenes = db.session.execute(
             text("SELECT numeroOrden AS orden, valor, fecha FROM Orden WHERE id_reporteMensual = :id_reporteMensual ORDER BY numeroOrden ASC"),
+            {'id_reporteMensual': id_reporteMensual}
+        ).fetchall()
+
+        # Consultar las facturas asociadas al reporte y ordenarlas por numeroFactura ascendente
+        facturas = db.session.execute(
+            text("SELECT numeroFactura AS factura, valor, fecha FROM Factura WHERE id_reporteMensual = :id_reporteMensual ORDER BY numeroFactura ASC"),
             {'id_reporteMensual': id_reporteMensual}
         ).fetchall()
 
@@ -105,13 +112,19 @@ def exportar_reporte(id_reporteMensual):
         ordenes_sheet.append(["Orden", "Valor", "Fecha"])
         for orden in ordenes:
             ordenes_sheet.append(list(orden))
+        
+        # Agregar hoja para facturas
+        facturas_sheet = workbook.create_sheet(title="Facturas")
+        facturas_sheet.append(["Factura", "Valor", "Fecha"])
+        for factura in facturas:
+            facturas_sheet.append(list(factura))
 
         # Agregar hoja para gastos
         gastos_sheet = workbook.create_sheet(title="Gastos")
         gastos_sheet.append(["Nombre del Gasto", "Valor", "Fecha"])
         for gasto in gastos:
             gastos_sheet.append(list(gasto))
-
+        
         # Guardar el archivo Excel en memoria
         workbook.save(output)
         output.seek(0)

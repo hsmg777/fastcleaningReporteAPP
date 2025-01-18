@@ -4,6 +4,7 @@ from flask_cors import CORS
 from controllers.Orden import blp as OrdenBluePrint
 from controllers.Gastos import blp as GastosBluePrint
 from controllers.ReporteMensual import blp as ReporteMensualBluePrint
+from controllers.Factura import blp as FacturaBluePrint
 from db import init_db
 import urllib.parse
 
@@ -49,6 +50,7 @@ def create_app(testing=False):
     api.register_blueprint(OrdenBluePrint)
     api.register_blueprint(GastosBluePrint)
     api.register_blueprint(ReporteMensualBluePrint)
+    api.register_blueprint(FacturaBluePrint)
 
     return app
 
