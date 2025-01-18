@@ -27,6 +27,11 @@ class OrdenList(MethodView):
     def post(self, data):
         """Crear una nueva orden"""
         try:
+            # Validar si el número de orden ya existe
+            orden_existente = Orden.query.filter_by(numeroOrden=data['numeroOrden']).first()
+            if orden_existente:
+                abort(400, message="El número de orden ya existe.")
+
             # Crear la nueva orden
             nueva_orden = Orden(
                 numeroOrden=data['numeroOrden'],
@@ -45,6 +50,8 @@ class OrdenList(MethodView):
             return nueva_orden
         except Exception as e:
             abort(400, message=f"Error al crear la orden: {str(e)}")
+
+
 
 
 # Nuevo endpoint para obtener órdenes por id_reporteMensual
@@ -77,6 +84,12 @@ class OrdenResource(MethodView):
         """Actualizar una orden existente"""
         try:
             orden = Orden.query.get_or_404(id_orden)
+
+            # Validar si el número de orden ya existe en otra orden
+            orden_existente = Orden.query.filter(Orden.numeroOrden == data['numeroOrden'], Orden.id != id_orden).first()
+            if orden_existente:
+                abort(400, message="El número de orden ya existe en otra orden.")
+
             if 'numeroOrden' in data:
                 orden.numeroOrden = data['numeroOrden']
             if 'valor' in data:

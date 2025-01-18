@@ -27,14 +27,10 @@ class FacturasList(MethodView):
     def post(self, data):
         """Crear una nueva factura"""
         try:
-            # Verificar si el id_reporteMensual existe
-            if data.get('id_reporteMensual'):
-                reporte = db.session.execute(
-                    text("SELECT id_reporteMensual FROM ReporteMensual WHERE id_reporteMensual = :id"),
-                    {'id': data['id_reporteMensual']}
-                ).fetchone()
-                if not reporte:
-                    abort(404, message="El reporte mensual no existe.")
+            # Validar si el número de factura ya existe
+            factura_existente = Factura.query.filter_by(numeroFactura=data['numeroFactura']).first()
+            if factura_existente:
+                abort(400, message="El número de factura ya existe.")
 
             # Crear la nueva factura
             nueva_factura = Factura(
@@ -95,6 +91,12 @@ class FacturasResource(MethodView):
         """Actualizar una factura existente"""
         try:
             factura = Factura.query.get_or_404(id_factura)
+
+            # Validar si el número de factura ya existe en otra factura
+            factura_existente = Factura.query.filter(Factura.numeroFactura == data['numeroFactura'], Factura.id != id_factura).first()
+            if factura_existente:
+                abort(400, message="El número de factura ya existe en otra factura.")
+
             if 'numeroFactura' in data:
                 factura.numeroFactura = data['numeroFactura']
             if 'valor' in data:
