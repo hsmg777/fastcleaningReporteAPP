@@ -22,11 +22,16 @@ class GastosList(MethodView):
         gastos = Gastos.query.all()
         return gastos
 
-    @blp.arguments(GastosSchema)  # Valida la entrada con el esquema
-    @blp.response(201, GastosSchema)  # Define el esquema para la respuesta
+    @blp.arguments(GastosSchema)
+    @blp.response(201, GastosSchema)
     def post(self, data):
         """Crear un nuevo gasto"""
         try:
+            print("📌 Datos Recibidos en Flask:", data)  # Depuración en consola
+            
+            if not data.get('id_reporteMensual') or not data.get('nombreGasto') or not data.get('valor'):
+                abort(400, message="Faltan datos en la solicitud.")
+
             # Crear el nuevo gasto
             nuevo_gasto = Gastos(
                 nombreGasto=data['nombreGasto'],
@@ -34,17 +39,22 @@ class GastosList(MethodView):
                 fecha=data.get('fecha'),  # Aceptar fecha si viene en el JSON
                 id_reporteMensual=data['id_reporteMensual']
             )
+
             db.session.add(nuevo_gasto)
             db.session.commit()
 
-            # Llamar al Stored Procedure para actualizar el reporte mensual
-            stored_proc = text("EXEC sp_UpdateReporteMensual :id")
-            db.session.execute(stored_proc, {'id': data['id_reporteMensual']})
-            db.session.commit()
+            # Llamar al Stored Procedure en MySQL
+            if nuevo_gasto.id_reporteMensual:
+                stored_proc = text("CALL sp_UpdateReporteMensual(:id)")
+                db.session.execute(stored_proc, {'id': nuevo_gasto.id_reporteMensual})
+                db.session.commit()
 
             return nuevo_gasto
+
         except Exception as e:
+            print(f"🚨 Error en Flask: {str(e)}")  # Depuración
             abort(400, message=f"Error al crear el gasto: {str(e)}")
+
 
 
 # Rutas para /tasks/gastos/<int:id_gastos>
@@ -74,7 +84,7 @@ class GastosResource(MethodView):
             db.session.commit()
 
             # Llamar al Stored Procedure para actualizar el reporte mensual
-            stored_proc = text("EXEC sp_UpdateReporteMensual :id")
+            stored_proc = text("CALL sp_UpdateReporteMensual(:id)")
             db.session.execute(stored_proc, {'id': gasto.id_reporteMensual})
             db.session.commit()
 
@@ -92,7 +102,7 @@ class GastosResource(MethodView):
             db.session.commit()
 
             # Llamar al Stored Procedure para actualizar el reporte mensual
-            stored_proc = text("EXEC sp_UpdateReporteMensual :id")
+            stored_proc = text("CALL sp_UpdateReporteMensual(:id)")
             db.session.execute(stored_proc, {'id': id_reporteMensual})
             db.session.commit()
 

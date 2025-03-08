@@ -16,40 +16,46 @@ ordenes_schema = OrdenSchema(many=True)
 # Rutas para /tasks/ordenes
 @blp.route('/ordenes')
 class OrdenList(MethodView):
-    @blp.response(200, OrdenSchema(many=True))  # Define el esquema para la respuesta
+    @blp.response(200, OrdenSchema(many=True))
     def get(self):
         """Obtener todas las órdenes"""
         ordenes = Orden.query.all()
         return ordenes
 
-    @blp.arguments(OrdenSchema)  # Valida la entrada con el esquema
-    @blp.response(201, OrdenSchema)  # Define el esquema para la respuesta
+    @blp.arguments(OrdenSchema)
+    @blp.response(201, OrdenSchema)
     def post(self, data):
         """Crear una nueva orden"""
         try:
-            # Validar si el número de orden ya existe
+            print("📌 Datos Recibidos en Flask:", data)  # Agregamos esta línea
+
+            if not data.get('id_reporteMensual') or not data.get('numeroOrden') or not data.get('valor'):
+                abort(400, message="Faltan datos en la solicitud.")
+
             orden_existente = Orden.query.filter_by(numeroOrden=data['numeroOrden']).first()
             if orden_existente:
                 abort(400, message="El número de orden ya existe.")
 
-            # Crear la nueva orden
             nueva_orden = Orden(
                 numeroOrden=data['numeroOrden'],
                 valor=data['valor'],
                 fecha=data.get('fecha'),
                 id_reporteMensual=data['id_reporteMensual']
             )
+
             db.session.add(nueva_orden)
             db.session.commit()
 
-            # Llamar al Stored Procedure para actualizar el reporte mensual
-            stored_proc = text("EXEC sp_UpdateReporteMensual :id")
+            stored_proc = text("CALL sp_UpdateReporteMensual(:id)")
             db.session.execute(stored_proc, {'id': data['id_reporteMensual']})
             db.session.commit()
 
             return nueva_orden
+
         except Exception as e:
+            print(f"🚨 Error en Flask: {str(e)}")  # Depuración en consola
             abort(400, message=f"Error al crear la orden: {str(e)}")
+
 
 
 
@@ -102,7 +108,7 @@ class OrdenResource(MethodView):
             db.session.commit()
 
             # Llamar al Stored Procedure para actualizar el reporte mensual
-            stored_proc = text("EXEC sp_UpdateReporteMensual :id")
+            stored_proc = text("CALL sp_UpdateReporteMensual(:id)")
             db.session.execute(stored_proc, {'id': orden.id_reporteMensual})
             db.session.commit()
 
@@ -120,7 +126,7 @@ class OrdenResource(MethodView):
             db.session.commit()
 
             # Llamar al Stored Procedure para actualizar el reporte mensual
-            stored_proc = text("EXEC sp_UpdateReporteMensual :id")
+            stored_proc = text("CALL sp_UpdateReporteMensual(:id)")
             db.session.execute(stored_proc, {'id': id_reporteMensual})
             db.session.commit()
 

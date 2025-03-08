@@ -13,44 +13,52 @@ factura_schema = FacturaSchema()  # Para un único objeto
 facturas_schema = FacturaSchema(many=True)  # Para listas de objetos
 
 
-# Rutas para /tasks/facturas
 @blp.route('/facturas')
 class FacturasList(MethodView):
-    @blp.response(200, FacturaSchema(many=True))  # Define el esquema para la respuesta
+    @blp.response(200, FacturaSchema(many=True))
     def get(self):
         """Obtener todas las facturas"""
         facturas = Factura.query.all()
         return facturas
 
-    @blp.arguments(FacturaSchema)  # Valida la entrada con el esquema
-    @blp.response(201, FacturaSchema)  # Define el esquema para la respuesta
+    @blp.arguments(FacturaSchema)
+    @blp.response(201, FacturaSchema)
     def post(self, data):
         """Crear una nueva factura"""
         try:
-            # Validar si el número de factura ya existe
+            print("📌 Datos Recibidos en Flask:", data)  # Depuración en consola
+            
+            if not data.get('id_reporteMensual') or not data.get('numeroFactura') or not data.get('valor'):
+                abort(400, message="Faltan datos en la solicitud.")
+
+            # Verificar si la factura ya existe
             factura_existente = Factura.query.filter_by(numeroFactura=data['numeroFactura']).first()
             if factura_existente:
                 abort(400, message="El número de factura ya existe.")
 
-            # Crear la nueva factura
+            # Crear la factura
             nueva_factura = Factura(
                 numeroFactura=data['numeroFactura'],
                 valor=data['valor'],
-                fecha=data.get('fecha'),  # Usará la fecha proporcionada o el valor predeterminado del modelo
+                fecha=data.get('fecha'),
                 id_reporteMensual=data.get('id_reporteMensual')
             )
+
             db.session.add(nueva_factura)
             db.session.commit()
 
-            # Llamar al Stored Procedure para actualizar el reporte mensual
+            # Llamar al Stored Procedure en MySQL
             if nueva_factura.id_reporteMensual:
-                stored_proc = text("EXEC sp_UpdateReporteMensual :id")
+                stored_proc = text("CALL sp_UpdateReporteMensual(:id)")
                 db.session.execute(stored_proc, {'id': nueva_factura.id_reporteMensual})
                 db.session.commit()
 
             return nueva_factura
+
         except Exception as e:
+            print(f"🚨 Error en Flask: {str(e)}")  # Depuración
             abort(400, message=f"Error al crear la factura: {str(e)}")
+
 
 
 # Nuevo endpoint para obtener facturas por id_reporteMensual
@@ -136,7 +144,7 @@ class FacturasResource(MethodView):
 
             # Llamar al Stored Procedure para actualizar el reporte mensual
             if id_reporteMensual:
-                stored_proc = text("EXEC sp_UpdateReporteMensual :id")
+                stored_proc = text("CALL sp_UpdateReporteMensual(:id)")
                 db.session.execute(stored_proc, {'id': id_reporteMensual})
                 db.session.commit()
 
